@@ -618,4 +618,14 @@ process.on('unhandledRejection', (err) => {
   console.error('[UNHANDLED REJECTION]', err?.message || err);
 });
 
+// ─── Keep-alive HTTP server (required by Render Web Services) ─────────────────
+const http = require('http');
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end('OK');
+}).listen(PORT, () => {
+  console.log(`✅ Health-check server listening on port ${PORT}`);
+});
+
 console.log('🤖 FlashAza Bot is running...');
