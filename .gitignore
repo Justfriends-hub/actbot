@@ -1,0 +1,31 @@
+# ── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Environment / secrets ─────────────────────────────────────────────────────
+.env
+
+# ── Local database (ephemeral, not needed on Render) ─────────────────────────
+*.sqlite
+*.db
+
+# ── Generated output files ────────────────────────────────────────────────────
+*.pdf
+*.png
+
+# ── Unused PHP files (not part of the Node bot) ──────────────────────────────
+bot-api.php
+config.php
+
+# ── Unused HTML/CSS templates ─────────────────────────────────────────────────
+o_style_bot_receipt.html
+opay-style-receipt.html
+opa-style.css
+
+# ── Notes / markdown scratch files ───────────────────────────────────────────
+opa-reciept.md
+
+# ── Test files ────────────────────────────────────────────────────────────────
+test_o_style.js
+
+# ── macOS system files ────────────────────────────────────────────────────────
+.DS_Store
