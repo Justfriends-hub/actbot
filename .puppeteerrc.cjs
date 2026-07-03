@@ -3,16 +3,27 @@ const { join } = require('path');
 /**
  * .puppeteerrc.cjs
  *
- * Redirects Puppeteer's Chrome download into the project folder instead of
- * the global user cache (~/.cache/puppeteer on Linux / /opt/render/.cache).
+ * Two problems this config solves for Render deployments:
  *
- * On Render, the old global cache path sometimes contains a corrupt/partial
- * Chrome folder from a previous deploy, which breaks the postinstall step.
- * By placing the cache inside the project source directory we guarantee a
- * clean slate every build.
+ * 1. skipDownload: true
+ *    Puppeteer's npm postinstall script also tries to download Chrome.
+ *    If that download fails (timeout / partial write), it leaves a corrupt
+ *    folder. Then the explicit build-command step
+ *      npx puppeteer browsers install chrome
+ *    sees "folder exists but executable missing" and errors.
+ *    Setting skipDownload skips the postinstall entirely, so the explicit
+ *    step always runs against a clean (empty) cache directory.
+ *
+ * 2. cacheDirectory inside the project
+ *    Points Chrome to .cache/puppeteer (inside the repo) rather than the
+ *    global /opt/render/.cache which can contain stale folders from older
+ *    deploys that used a different puppeteer version.
  */
 
 /** @type {import("puppeteer").Configuration} */
 module.exports = {
+  // Skip the automatic download that runs during 'npm install'.
+  // Chrome is installed explicitly via the build command instead.
+  skipDownload: true,
   cacheDirectory: join(__dirname, '.cache', 'puppeteer'),
 };
