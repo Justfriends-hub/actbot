@@ -62,10 +62,29 @@ async function takeFlashAzaScreenshot(style, tx, overridePage = null) {
   console.log(`[screenshot] tx.type="${tx.type}", overridePage="${overridePage}" → ${phpPage}`);
   console.log(`[screenshot] Navigating to: ${receiptUrl}`);
 
-  const browser = await puppeteer.launch({
+  // Build the launch options. On Render (and most Linux CI environments) Chrome
+  // must run with --no-sandbox. We also pass the full set of flags that prevent
+  // common crash / GPU issues in headless cloud environments.
+  const launchOptions = {
     headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+    // If the host provides a pre-installed Chrome (e.g. via PUPPETEER_EXECUTABLE_PATH
+    // env var set on Render), use it; otherwise fall back to Puppeteer's own download.
+    ...(process.env.PUPPETEER_EXECUTABLE_PATH
+      ? { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH }
+      : {}),
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',   // avoids /dev/shm size issues in containers
+      '--disable-gpu',             // not needed in headless; prevents GPU init errors
+      '--no-first-run',
+      '--no-zygote',               // avoids "zygote" process crash on some Linux builds
+      '--single-process',          // helps on memory-constrained envs (Render free tier)
+      '--disable-extensions',
+    ],
+  };
+
+  const browser = await puppeteer.launch(launchOptions);
 
   try {
     const page = await browser.newPage();
