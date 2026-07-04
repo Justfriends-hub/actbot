@@ -628,4 +628,45 @@ http.createServer((req, res) => {
   console.log(`✅ Health-check server listening on port ${PORT}`);
 });
 
+// ─── Self-ping keep-alive (prevents Render free tier from spinning down) ──────
+// Pings this bot's own health endpoint + the FlashAza backend every 9 minutes
+// so neither service ever goes idle (Render spins down after ~15 min of inactivity).
+//
+// Set SELF_URL in your Render environment variables to your service's URL,
+// e.g.  SELF_URL=https://flashazaaa-bot.onrender.com
+// If SELF_URL is not set, it pings localhost (still resets Render's idle timer).
+const KEEP_ALIVE_INTERVAL_MS = 9 * 60 * 1000; // 9 minutes
+
+function pingUrl(targetUrl) {
+  try {
+    const parsed = new URL(targetUrl);
+    const lib = parsed.protocol === 'https:' ? require('https') : http;
+    const req = lib.get(targetUrl, (res) => {
+      console.log(`[keep-alive] Pinged ${targetUrl} → HTTP ${res.statusCode}`);
+      res.resume(); // drain the response so the socket is released
+    });
+    req.on('error', (err) => {
+      console.warn(`[keep-alive] Ping failed for ${targetUrl}: ${err.message}`);
+    });
+    req.setTimeout(10000, () => {
+      req.destroy();
+      console.warn(`[keep-alive] Ping timed out for ${targetUrl}`);
+    });
+  } catch (err) {
+    console.warn(`[keep-alive] Invalid URL "${targetUrl}": ${err.message}`);
+  }
+}
+
+setInterval(() => {
+  // 1️⃣  Ping this bot itself (keeps Render from sleeping)
+  const selfUrl = process.env.SELF_URL || `http://localhost:${PORT}`;
+  pingUrl(selfUrl);
+
+  // 2️⃣  Ping the FlashAza backend (keeps Vercel/host from sleeping)
+  const backendUrl = (process.env.BACKEND_URL || '').replace(/\/$/, '');
+  if (backendUrl) pingUrl(backendUrl);
+
+}, KEEP_ALIVE_INTERVAL_MS);
+
+console.log(`🏓 Keep-alive running every ${KEEP_ALIVE_INTERVAL_MS / 60000} min`);
 console.log('🤖 FlashAza Bot is running...');
